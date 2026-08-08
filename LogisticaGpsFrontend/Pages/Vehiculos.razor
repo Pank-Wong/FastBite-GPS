@@ -1,0 +1,95 @@
+﻿@page "/vehiculos"
+@inject HttpClient Http
+@using System.Net.Http.Json
+
+<PageTitle>Gestión de Vehículos</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-3">Registrar Nuevo Vehículo GPS</h2>
+    <p class="text-muted">Ingresa los datos del vehículo y el código IMEI del dispositivo GPS instalado.</p>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Patente</label>
+                        <input class="form-control" @bind="vehiculo.Patente" placeholder="Ej: AB1234 o ABCD12" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Marca</label>
+                        <input class="form-control" @bind="vehiculo.Marca" placeholder="Ej: Suzuki" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Modelo</label>
+                        <input class="form-control" @bind="vehiculo.Modelo" placeholder="Ej: Alto" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">IMEI del GPS</label>
+                        <input class="form-control" @bind="vehiculo.Imei" placeholder="Número único de 15 dígitos" />
+                    </div>
+
+                    <div class="d-grid">
+                        <button class="btn btn-success" @onclick="GuardarVehiculo">Guardar Vehículo</button>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(mensaje))
+                    {
+                        <!-- Si hay mensaje, mostramos una alerta. Cambia de color si es error o éxito -->
+                        <div class="alert @(esExito ? "alert-success" : "alert-danger") mt-3 text-center">
+                            @mensaje
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Definimos la estructura del vehículo para enviar a Spring Boot
+    public class VehiculoDTO
+    {
+        public string Patente { get; set; } = "";
+        public string Marca { get; set; } = "";
+        public string Modelo { get; set; } = "";
+        public string Imei { get; set; } = "";
+    }
+
+    private VehiculoDTO vehiculo = new VehiculoDTO();
+    private string mensaje = "";
+    private bool esExito = false;
+
+    private async Task GuardarVehiculo()
+    {
+        try
+        {
+            mensaje = "Guardando...";
+            var response = await Http.PostAsJsonAsync("api/vehiculos/registrar", vehiculo);
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensaje = "¡Vehículo registrado con éxito en la base de datos!";
+                esExito = true;
+                vehiculo = new VehiculoDTO(); // Limpia el formulario para otro ingreso
+            }
+            else
+            {
+                // Captura el mensaje de error de Spring Boot (ej. "Patente repetida")
+                var error = await response.Content.ReadAsStringAsync();
+                mensaje = error;
+                esExito = false;
+            }
+        }
+        catch (Exception)
+        {
+            mensaje = "Error de conexión con el servidor.";
+            esExito = false;
+        }
+    }
+}

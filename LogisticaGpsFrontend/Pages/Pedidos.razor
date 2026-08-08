@@ -1,0 +1,103 @@
+﻿@page "/pedidos"
+@inject HttpClient Http
+@using System.Net.Http.Json
+
+<PageTitle>Gestión de Pedidos</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-3">Registrar Nuevo Pedido</h2>
+    <p class="text-muted">Ingresa los datos del cliente y el detalle del envío para la plataforma logística.</p>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+
+                    <h5 class="card-title text-primary mb-3">Datos del Cliente</h5>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Completo</label>
+                        <input class="form-control" @bind="pedido.Cliente.Nombre" placeholder="Ej: Juan Pérez" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Teléfono</label>
+                        <input class="form-control" @bind="pedido.Cliente.Telefono" placeholder="Ej: +56912345678" />
+                    </div>
+
+                    <h5 class="card-title text-primary mb-3">Detalles del Envío</h5>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Dirección de Entrega</label>
+                        <input class="form-control" @bind="pedido.DireccionDestino" placeholder="Ej: Av. Providencia 1234, Depto 5" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Descripción del Pedido</label>
+                        <textarea class="form-control" @bind="pedido.Descripcion" rows="2" placeholder="Ej: 2 Hamburguesas Dobles con papas y bebida"></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button class="btn btn-primary" @onclick="GuardarPedido">Registrar Pedido</button>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(mensaje))
+                    {
+                        <div class="alert @(esExito ? "alert-success" : "alert-danger") mt-3 text-center">
+                            @mensaje
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    public class ClienteDTO
+    {
+        public string Nombre { get; set; } = "";
+        public string Telefono { get; set; } = "";
+        // Agregamos la propiedad que Java estaba exigiendo
+        public string Direccion { get; set; } = "";
+    }
+
+    public class PedidoDTO
+    {
+        public string Descripcion { get; set; } = "";
+        public string DireccionDestino { get; set; } = "";
+        public ClienteDTO Cliente { get; set; } = new ClienteDTO();
+    }
+
+    private PedidoDTO pedido = new PedidoDTO();
+    private string mensaje = "";
+    private bool esExito = false;
+
+    private async Task GuardarPedido()
+    {
+        try
+        {
+            mensaje = "Procesando...";
+
+            // ¡Solución! Copiamos la dirección de entrega al perfil del cliente para que Java no reclame
+            pedido.Cliente.Direccion = pedido.DireccionDestino;
+
+            var response = await Http.PostAsJsonAsync("api/pedidos/registrar", pedido);
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensaje = "¡Pedido y cliente registrados con éxito en el sistema!";
+                esExito = true;
+                pedido = new PedidoDTO(); // Limpiar el formulario
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                mensaje = error;
+                esExito = false;
+            }
+        }
+        catch (Exception)
+        {
+            mensaje = "Error de conexión con el servidor.";
+            esExito = false;
+        }
+    }
+}
